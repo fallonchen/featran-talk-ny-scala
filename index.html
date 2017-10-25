@@ -136,6 +136,201 @@
 						</code>
 					</pre>
 				</section>
+				<section>
+					<h2>Notice a pattern?</h2>
+					<ul>
+						<li class="fragment" data-fragment-index="1">Extract T => A e.g. Song => genre</li>
+						<li class="fragment" data-fragment-index="2"><span class="fragment highlight-green" data-fragment-index="6">Map A => B</span> e.g. genre to Set</li>
+						<li class="fragment" data-fragment-index="3"><span class="fragment highlight-green" data-fragment-index="6"> Reduce B => B</span> e.g. Set union</li>
+						<li class="fragment" data-fragment-index="4"><span class="fragment highlight-green" data-fragment-index="6"> Map B => C </span> e.g. Set to Seq in One Hot</li>
+						<li class="fragment" data-fragment-index="5">Map A => C e.g. Song => Seq</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Transformer</h2>
+					<ul>
+						<li>Extract T => A e.g. Song => genre</li>
+						<li class="fragment highlight-green" data-fragment-index="2">Aggregator[A, B, C] // MapReduceMap</li>
+						<li>Map A => C e.g. Song => Seq</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Featran</h2>
+				</section>
+				<section>
+					<h2>FeatureSpec</h2>
+					<pre>
+						<code>
+							class FeatureSpec[T] {
+  								def required[A](f: T => A)(t: Transformer[A, _, _])
+  								def optional[A](f: T => Option[A], default: Option[A] = None)(t: Transformer[A, _, _])
+							}
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>FeatureSpec</h2>
+					<pre>
+						<code>
+							val fs = FeatureSpec.of[Song]
+  							   .required(_.numPlays)(Binarizer("isPopular", 500000.0))
+  						       .required(_.numPlays)(MinMaxScaler("numPlay_normalized"))
+  						       .optional(_.genre)(OneHotEncoder("genre"))
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>FeatureExtractor</h2>
+
+					<pre>
+						<code>
+							val fe = fs.extract(songs)
+						</code>
+					</pre>
+
+				</section>
+				<section>
+					<h3>FeatureExtractor - CollectionType</h3>
+					<p>FeatureSpec#extract<span class="fragment highlight-green" data-fragment-index="1">[M[_]: CollectionType]</span>(input: M[T]): FeatureExtractor[M, T]</p>
+					<pre>
+						<code class="fragment" data-fragment-index="2">
+							trait CollectionType[M[_]] { self =>
+  								def map[A, B](ma: M[A], f: A => B): M[B]
+  								def reduce[A](ma: M[A], f: (A, A) => A): M[A]
+  								def cross[A, B](ma: M[A], mb: M[B]): M[(A, B)] // map A with C
+							}
+						</code>
+					</pre>
+					<p class="fragment" data-fragment-index="3">Available for Scala collections and a few other collection types that extend this trait</p>
+				</section>
+				<section>
+					<h3>FeatureExtractor - What it gives you</h3>
+					<ul>
+						<li>featureNames</li>
+						<li>featureValues</li>
+						<li>featureSettings</li>
+					</ul>
+				</section>
+				<section>
+					<h3>FeatureExtractor - featureNames</h3>
+					<p>Names passed to the transformer</p>
+					<pre>
+						<code>
+							fe.featureNames
+							// Array("isPopular", "numPlay_normalized", "genre_rock", "genre_hiphop", "genre_pop", "genre_metal")
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h3>FeatureExtractor - featureValues</h3>
+					<pre>
+						<code>
+							val fv = fe.featureValues[Seq[Double]]
+							// Seq(Seq(0.0,1.0, 0.0, 0.0, 1.0, 0.0), Seq()...)
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h3>FeatureExtractor#featureValues</h3>
+					<p>FeatureExtractor#featureValues<span class="fragment highlight-green" data-fragment-index="1">[F: FeatureBuilder]</span>: M[F]</p>
+					<pre>
+						<code data-trim class="fragment" data-fragment-index="2">
+							trait FeatureBuilder[T] { self =>
+  def init(dimension: Int): Unit
+  def add(name: String, value: Double): Unit
+  def skip(): Unit
+  def result: T
+  def map[U](f: T => U): FeatureBuilder[U] = new FeatureBuilder[U] {
+    // ...
+  }
+						</code>
+					</pre>
+					<p class="fragment" data-fragment-index="3">Can output feature as
+						Array[T], Traversable[T], SparseVector[T], DenseVector[T], Map[String, T], TensorFlow Example protobuf ...</p>
+
+				</section>
+				<section>
+					<h3>FeatureExtractor#featureSettings</h3>
+					<p>Save the results of the Aggregator step (map-reduce-map) for future use</p>
+<pre>
+	<code>
+		fe.extract(songs).featureSettings
+		// show output
+
+	</code>
+</pre>
+				</section>
+				<section>
+					<h3>FeatureExtractor#featureSettings</h3>
+					<p>Use saved settings for future use</p>
+					<pre>
+						<code>
+							// make this workable
+							fs.extractWithSettings(songs)
+						</code>
+					</pre>
+
+				</section>
+				<section>
+					<h3>Other features - feature rejection</h3>
+					<pre>
+						<code>
+
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h3>Other features - Combining specs</h3>
+					<pre>
+						<code>
+							val fs1: FeatureSpec.of[Record] = // ...
+val fs2: FeatureSpec.of[Record] = // ...
+MultiFeatureSpec(f1, f2).extract(data)
+						</code>
+					</pre>
+
+				</section>
+				<section>
+					<h3>Other features - Feature crossing</h3>
+				</section>
+				<section>
+					<h3>Other features - Java API</h3>
+				</section>
+<section>
+	<h3>Available Transformers</h3>
+	<ul>
+		<li>Binarizer</li>
+		<li>Bucketizer</li>
+		<li>Hash{OneHot,NHot,NHotWeighted}Encoder</li>
+		<li>HeavyHitters</li>
+		<li>Identity</li>
+	<li>MaxAbsScaler</li>
+		<li>MinMaxScaler</li>
+		<li>{OneHot,NHot,NHotWeighted}Encoder</li>
+		<li>PolynomialExpansion</li>
+		<li>QuantileDiscretizer</li>
+		<li>StandardScaler</li>
+		<li>VectorIdentity</li>
+	<li>VonMisesEvaluator</li>
+	</ul>
+</section>
+				<section>
+					<h3>Why use Featran?</h3>
+					<ul>
+						<li>Simple specification of feature building</li>
+						<li>Many common transformers provided out of the box</li>
+						<li>Supports many input collection types and output feature formats</li>
+						<li>Ability to save intermediate stages using featureSettings</li>
+						<li>Ability to compose features using feature crossing</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Want to know more?</h2>
+					<p>https://github.com/spotify/featran</p>
+				</section>
+				<section>
+					<h2>Thanks! Questions?</h2>
+				</section>
 			</div>
 		</div>
 
