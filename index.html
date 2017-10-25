@@ -24,28 +24,29 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>
+				<section id="1">
 					<h2>Featran</h2>
 					<h3>Type Safe and Generic Feature Transformation in Scala</h3>
 					<h5>Fallon Chen, fallon@spotify.com</h5>
 				</section>
-				<section>Feature Engineering
+				<section id="2">Feature Engineering
 					<p class="fragment">The art and craft of using domain knowledge to transform raw data into a form useful in machine learning algorithms</p>
 				</section>
-					<section>
+					<section id="3">
 						<p class="fragment">Features</p>
 					<pre>
 						<code class="fragment">
-							case class Song(name: String, artist: String, genre: String, numPlays: Long)
-							val songs = Seq(Song("Blackbird","The Beatles", "Rock", 46522936),
-											Song("Bleed", "Meshuggah", "Metal", 8741978),
-											Song("Bad and Bougee", "Migos", "Hip Hop", 379732121),
-											Song("Feet Don't Fail Me", "Queens of the Stone Age", "Rock", 56420961)
-							)
+		case class Song(id: Long, name: String, artist: String, genre: Option[String], numPlays: Long)
+		case class User(userId: String, mostPlayedGenre: String, top3Songs: Seq[Long])
 
-							case class User(userId: String, mostPlayedGenre: String, top3Songs: Seq[Song]))
-							val users = Seq(User("fantasticbeats", "Hip Hop", "99 Problems"),
-											User("dansemacabre", "Metal", "The Trooper"))
+		val songs = Seq(Song(1, "Blackbird","The Beatles", Some("Rock"), 46522936),
+		Song(2, "Bleed", "Meshuggah", Some("Metal"), 8741978),
+		Song(3, "Bad and Bougee", "Migos", Some("Hip Hop"), 379732121),
+		Song(4, "Feet Don't Fail Me", "Queens of the Stone Age", Some("Rock"), 5642096)
+		)
+
+		val users = Seq(User("fantasticbeats", "Hip Hop", Seq(3, 4, 1)),
+		User("dansemacabre", "Metal", Seq(2, 1, 4)))
 
 						</code>
 					</pre>
@@ -88,9 +89,9 @@
 					<pre>
 						<code class="fragment" data-fragment-index="1">
 							val threshold = 5000000L // 50M
-							val songs = songs.
+							val isPopular = songs.
 								map(s => if(s.numPlays >= threshold) 1.0 else 0.0)
-							// List(0.0, 0.0, 1.0, 1.0, 0.0)
+							// isPopular: Seq[Double] = List(1.0, 1.0, 1.0, 1.0)
 						</code>
 					</pre>
 				</section>
@@ -110,6 +111,7 @@
 							val minMax = songs.map { x =>
 									((x.numPlays - songsMinPlays) / (songsMaxPlays - songsMinPlays)) * (max - min) + min
 								}
+							//minMax: Seq[Double] = List(1.9835267513990402, 1.074578134343028, 9.999999463558197, 1.0)
 						</code>
 					</pre>
 				</section>
@@ -129,10 +131,12 @@
 							 				  .map(Set(_))
 											  .reduce(_ ++ _)
 							                  .toSeq.sorted
+							// genres: Seq[String] = ArrayBuffer(Hip Hop, Metal, Rock)
+
 							// Calculate one hots
 							val oneHots = songs.map(s => genres.map(g => if(s.genre == g) 1.0 else 0.0))
 
-							// List(Vector(0.0, 0.0, 1.0), Vector(0.0, 1.0, 0.0), Vector(1.0, 0.0, 0.0), Vector(0.0, 0.0, 1.0))
+							//oneHots: List(ArrayBuffer(0.0, 0.0, 1.0), ArrayBuffer(0.0, 1.0, 0.0), ArrayBuffer(1.0, 0.0, 0.0), ArrayBuffer(0.0, 0.0, 1.0))
 						</code>
 					</pre>
 				</section>
@@ -172,7 +176,10 @@
 					<h2>FeatureSpec</h2>
 					<pre>
 						<code>
-							val fs = FeatureSpec.of[Song]
+							import com.spotify.featran._
+							import com.spotify.featran.transformers._
+
+							val featureSpec = FeatureSpec.of[Song]
   							   .required(_.numPlays)(Binarizer("isPopular", 500000.0))
   						       .required(_.numPlays)(MinMaxScaler("numPlay_normalized"))
   						       .optional(_.genre)(OneHotEncoder("genre"))
@@ -184,7 +191,8 @@
 
 					<pre>
 						<code>
-							val fe = fs.extract(songs)
+							val featureExtractor = featureSpec.extract(songs)
+							// featureExtractor: com.spotify.featran.FeatureExtractor[Seq,Song]
 						</code>
 					</pre>
 
@@ -216,8 +224,8 @@
 					<p>Names passed to the transformer</p>
 					<pre>
 						<code>
-							fe.featureNames
-							// Array("isPopular", "numPlay_normalized", "genre_rock", "genre_hiphop", "genre_pop", "genre_metal")
+							val featureNames = fe.featureNames
+							// featureNames: Seq[Seq[String]] = List(List(isPopular, numPlay_normalized, genre_Hip Hop, genre_Metal, genre_Rock))
 						</code>
 					</pre>
 				</section>
@@ -225,8 +233,8 @@
 					<h3>FeatureExtractor - featureValues</h3>
 					<pre>
 						<code>
-							val fv = fe.featureValues[Seq[Double]]
-							// Seq(Seq(0.0,1.0, 0.0, 0.0, 1.0, 0.0), Seq()...)
+							val featureValues = fe.featureValues[Seq[Double]]
+							// featureValues: Seq[Seq[Double]] = List(List(1.0, 0.10928075401101646, 0.0, 0.0, 1.0), List(1.0, 0.00828645992365073, 0.0, 1.0, 0.0), List(1.0, 1.0, 1.0, 0.0, 0.0), List(1.0, 0.0, 0.0, 0.0, 1.0))
 						</code>
 					</pre>
 				</section>
@@ -254,47 +262,62 @@
 					<p>Save the results of the Aggregator step (map-reduce-map) for future use</p>
 <pre>
 	<code>
-		fe.extract(songs).featureSettings
-		// show output
-
+		val settings = fe.extract(songs).featureSettings
+// settings: Seq[String] = List([{"cls":"com.spotify.featran.transformers.Binarizer","name":"isPopular","params":{"threshold":"500000.0"},"featureNames":["isPopular"],"aggregators":""},{"cls":"com.spotify.featran.transformers.MinMaxScaler","name":"numPlay_normalized","params":{"min":"0.0","max":"1.0"},"featureNames":["numPlay_normalized"],"aggregators":"5642096.0,3.79732121E8,1.0"},{"cls":"com.spotify.featran.transformers.OneHotEncoder","name":"genre","params":{},"featureNames":["genre_Hip Hop","genre_Metal","genre_Rock"],"aggregators":"label:Hip+Hop,label:Metal,label:Rock"}])
 	</code>
 </pre>
 				</section>
 				<section>
 					<h3>FeatureExtractor#featureSettings</h3>
-					<p>Use saved settings for future use</p>
+					<p>Use saved settings to skip Aggregator step</p>
 					<pre>
 						<code>
-							// make this workable
-							fs.extractWithSettings(songs)
+							val ews = featureSpec.extractWithSettings(songs, settings)
+							// ews: FeatureExtractor[Seq,Song]
 						</code>
 					</pre>
 
 				</section>
 				<section>
-					<h3>Other features - feature rejection</h3>
+					<h3>Other features - Feature rejection</h3>
+					<p>Transformer provides separate error indicating output variable for each record</p>
 					<pre>
 						<code>
+							val validValues = featureExtractor.featureResults[Seq[Double]]
+															  .filter(_.rejections.isEmpty)
+															  .map(_.value)
 
 						</code>
 					</pre>
 				</section>
 				<section>
 					<h3>Other features - Combining specs</h3>
+					<p>Compute multiple feature transformations over the same inputs</p>
 					<pre>
 						<code>
-							val fs1: FeatureSpec.of[Record] = // ...
-val fs2: FeatureSpec.of[Record] = // ...
-MultiFeatureSpec(f1, f2).extract(data)
+							val fs1 = FeatureSpec.of[Song]
+  .required(_.numPlays.toDouble)(Binarizer("isPopular", 500000.0))
+  .required(_.numPlays.toDouble)(MinMaxScaler("numPlay_normalized"))
+val fs2 = FeatureSpec.of[Song]
+  .optional(_.genre)(OneHotEncoder("genre"))
+
+val multiFeatures = MultiFeatureSpec(fs1, fs2).extract(songs)
+multiFeaturesfeatureNames
+							// Seq[Seq[Seq[String]]] = List(Vector(List(isPopular, numPlay_normalized), List(genre_Hip Hop, genre_Metal, genre_Rock)))
+multiFeatures.featureValues[Seq[Double]]
+
+// Seq[Seq[Seq[Double]]] = List(WrappedArray(List(1.0, 0.10928075401101646), List(0.0, 0.0, 1.0)), WrappedArray(List(1.0, 0.00828645992365073), List(0.0, 1.0, 0.0)), WrappedArray(List(1.0, 1.0), List(1.0, 0.0, 0.0)), WrappedArray(List(1.0, 0.0), List(0.0, 0.0, 1.0)))
 						</code>
 					</pre>
 
 				</section>
 				<section>
 					<h3>Other features - Feature crossing</h3>
+					<p>Cross values of a pair of transformers by specifying transformer and function for combining</p>
 				</section>
 				<section>
 					<h3>Other features - Java API</h3>
+					<p>Do all your Featran style feature transformations in Java</p>
 				</section>
 <section>
 	<h3>Available Transformers</h3>
@@ -317,11 +340,10 @@ MultiFeatureSpec(f1, f2).extract(data)
 				<section>
 					<h3>Why use Featran?</h3>
 					<ul>
-						<li>Simple specification of feature building</li>
+						<li>Clarity and flexibility in how you compose and build features</li>
 						<li>Many common transformers provided out of the box</li>
 						<li>Supports many input collection types and output feature formats</li>
 						<li>Ability to save intermediate stages using featureSettings</li>
-						<li>Ability to compose features using feature crossing</li>
 					</ul>
 				</section>
 				<section>
