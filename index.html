@@ -145,18 +145,28 @@
 					<h2>Notice a pattern?</h2>
 					<ul>
 						<li class="fragment" data-fragment-index="1">Extract T => A e.g. Song => genre</li>
-						<li class="fragment" data-fragment-index="2"><span class="fragment highlight-green" data-fragment-index="6">Map A => B</span> e.g. genre to Set</li>
-						<li class="fragment" data-fragment-index="3"><span class="fragment highlight-green" data-fragment-index="6"> Reduce B => B</span> e.g. Set union</li>
-						<li class="fragment" data-fragment-index="4"><span class="fragment highlight-green" data-fragment-index="6"> Map B => C </span> e.g. Set to Seq in One Hot</li>
-						<li class="fragment" data-fragment-index="5">Transform A using C e.g. Song => Seq using genres</li>
+						<li><span class="fragment" data-fragment-index="2">Aggregate</span><ul>
+							<li class="fragment" data-fragment-index="3">Map A => B e.g. genre to Set</li>
+							<li class="fragment" data-fragment-index="4">Reduce B => B e.g. Set union</li>
+							<li class="fragment" data-fragment-index="5">Map B => C e.g. Set to Seq in One Hot</li>
+						</ul>
+						</li>
+
+						<li class="fragment" data-fragment-index="6">Transform A using C e.g. Song => Seq using genres</li>
 					</ul>
 				</section>
 				<section>
 					<h2>Transformer</h2>
 					<ul>
-						<li>Extract T => A e.g. Song => genre</li>
-						<li class="fragment highlight-green" data-fragment-index="2">Aggregator[A, B, C] // MapReduceMap</li>
-						<li>Map A => C e.g. Song => Seq</li>
+						<li><span>Aggregate</span>
+							<ul>
+							<li>Map A => B e.g. genre to Set</li>
+							<li>Reduce B => B e.g. Set union</li>
+							<li>Map B => C e.g. Set to Seq in One Hot</li>
+						   </ul>
+						</li>
+
+						<li>Transform A using C e.g. Song => Seq using genres</li>
 					</ul>
 				</section>
 				<section>
