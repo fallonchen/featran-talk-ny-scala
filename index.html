@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Featran - NY Scala</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/simple.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h2>Featran</h2>
+					<h3>Type Safe and Generic Feature Transformation in Scala</h3>
+					<h5>Fallon Chen, fallon@spotify.com</h5>
+				</section>
+				<section>Feature Engineering
+					<p class="fragment">The art and craft of using domain knowledge to transform raw data into a form useful in machine learning algorithms</p>
+				</section>
+					<section>
+						<p class="fragment">Features</p>
+					<pre>
+						<code class="fragment">
+							case class Song(name: String, artist: String, genre: String, numPlays: Long)
+							val songs = Seq(Song("Blackbird","The Beatles", "Rock", 46522936),
+											Song("Bleed", "Meshuggah", "Metal", 8741978),
+											Song("Bad and Bougee", "Migos", "Hip Hop", 379732121),
+											Song("Feet Don't Fail Me", "Queens of the Stone Age", "Rock", 56420961)
+							)
+
+							case class User(userId: String, mostPlayedGenre: String, top3Songs: Seq[Song]))
+							val users = Seq(User("fantasticbeats", "Hip Hop", "99 Problems"),
+											User("dansemacabre", "Metal", "The Trooper"))
+
+						</code>
+					</pre>
+					</section>
+
+				<section>
+					<p class="fragment">Machine learning algorithms operate on systems of numbers, e.g. operations on matrices or vectors of floats</p>
+					<pre>
+						<code class="fragment">
+							// pretend set up for collaborative filtering for recommendation systems
+							val userLiked = users.map( u => songs.map(s => if(u.favoriteSongs.contains(s)) 1.0 else 0.0)
+							val (userVectors, songVectors) = secretSauceMatrixFactorization(songUserMatrix)
+							// userVector will look like Seq(1.0, 0.0, 1.0 ...)
+							// ... plug userVectors and songVectors into collaborative filtering model to get recommendation
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Feature Engineering: How we get from raw features like Song and User to ML algorithm friendly features like songVectors, at scale</h2>
+					<p>
+						<ul>
+							<li>30 million+ Songs x 140 million+ active Users</li>
+							<li>Need to transform features so that they are small enough to be processed in a timely manner and still useful in the model</li>
+							<li>Fortunately we're not trying to solve all of that in this talk, just explore how to simplify one part of the process</li>
+						</ul>
+					</p>
+				</section>
+				<section>
+					<h2>3 Basic Feature Transformations</h2>
+					<ul>
+						<li>Binarizer</li>
+						<li>Max-Min Scaler</li>
+						<li>One Hot Encoding</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>Binarizer</h2>
+					<p>Given a threshold, set a value to 0 or 1 based on its threshold</p>
+					<pre>
+						<code class="fragment" data-fragment-index="1">
+							val threshold = 5000000L // 50M
+							val songs = songs.
+								map(s => if(s.numPlays >= threshold) 1.0 else 0.0)
+							// List(0.0, 0.0, 1.0, 1.0, 0.0)
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Min-Max Scaler</h2>
+					<p>Given a min and a max, scale features to fit within that range</p>
+					<pre>
+						<code class="fragment">
+							val min = 1.0
+							val max = 10.0
+							// find min and max song plays in one pass
+							val (songsMinPlays, songsMaxPlays) = songs
+																.map(s => (s.numPlays.toFloat, s.numPlays.toFloat))
+																.reduce((x, y) =>
+																	(math.min(x._1, y._1), math.max(x._2, y._2)))
+
+							val minMax = songs.map { x =>
+									((x.numPlays - songsMinPlays) / (songsMaxPlays - songsMinPlays)) * (max - min) + min
+								}
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>One Hot Encoding</h2>
+					<p>Given a set of labels for a feature, the feature is transformed into an sequence that has a 1 in the position matching its label and 0 otherwise</p>
+					<p>val genres = Seq("pop","rock","hip hop","metal")</p>
+					<p>Song("Bleed", "Meshuggah", "Metal", 8741978) becomes (0, 0, 0, 1)</p>
+
+				</section>
+				<section>
+					<h2>One Hot Encoding</h2>
+					<pre>
+						<code>
+							// Find unique ordered labels
+							val genres = songs.map(_.genre)
+							 				  .map(Set(_))
+											  .reduce(_ ++ _)
+							                  .toSeq.sorted
+							// Calculate one hots
+							val oneHots = songs.map(s => genres.map(g => if(s.genre == g) 1.0 else 0.0))
+
+							// List(Vector(0.0, 0.0, 1.0), Vector(0.0, 1.0, 0.0), Vector(1.0, 0.0, 0.0), Vector(0.0, 0.0, 1.0))
+						</code>
+					</pre>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
