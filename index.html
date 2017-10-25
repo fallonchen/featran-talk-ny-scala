@@ -7,7 +7,7 @@
 		<title>Featran - NY Scala</title>
 
 		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/simple.css">
+		<link rel="stylesheet" href="css/theme/spotify.css">
 
 		<!-- Theme used for syntax highlighting of code -->
 		<link rel="stylesheet" href="lib/css/zenburn.css">
@@ -29,13 +29,13 @@
 					<h3>Type Safe and Generic Feature Transformation in Scala</h3>
 					<h5>Fallon Chen, fallon@spotify.com</h5>
 				</section>
-				<section id="2">Feature Engineering
+				<section id="2"><h3>Feature Engineering</h3>
 					<p class="fragment">The art and craft of using domain knowledge to transform raw data into a form useful in machine learning algorithms</p>
 				</section>
 					<section id="3">
-						<p class="fragment">Features</p>
+						<h3>Features</h3>
 					<pre>
-						<code class="fragment">
+						<code data-trim class="fragment">
 		case class Song(id: Long, name: String, artist: String, genre: Option[String], numPlays: Long)
 		case class User(userId: String, mostPlayedGenre: String, top3Songs: Seq[Long])
 
@@ -53,9 +53,10 @@
 					</section>
 
 				<section>
-					<p class="fragment">Machine learning algorithms operate on systems of numbers, e.g. operations on matrices or vectors of floats</p>
+					<h3>Feature Engineering</h3>
+					<p>Machine learning algorithms operate on systems of numbers, e.g. operations on matrices or vectors of floats</p>
 					<pre>
-						<code class="fragment">
+						<code data-trim class="fragment">
 							// pretend set up for collaborative filtering for recommendation systems
 							val userLiked = users.map( u => songs.map(s => if(u.favoriteSongs.contains(s)) 1.0 else 0.0)
 							val (userVectors, songVectors) = secretSauceMatrixFactorization(songUserMatrix)
@@ -63,16 +64,7 @@
 							// ... plug userVectors and songVectors into collaborative filtering model to get recommendation
 						</code>
 					</pre>
-				</section>
-				<section>
-					<h2>Feature Engineering: How we get from raw features like Song and User to ML algorithm friendly features like songVectors, at scale</h2>
-					<p>
-						<ul>
-							<li>30 million+ Songs x 140 million+ active Users</li>
-							<li>Need to transform features so that they are small enough to be processed in a timely manner and still useful in the model</li>
-							<li>Fortunately we're not trying to solve all of that in this talk, just explore how to simplify one part of the process</li>
-						</ul>
-					</p>
+					<p>How do we get from raw features like Song and User to ML algorithm friendly features like songVectors, at scale?</p>
 				</section>
 				<section>
 					<h2>3 Basic Feature Transformations</h2>
@@ -87,7 +79,7 @@
 					<h2>Binarizer</h2>
 					<p>Given a threshold, set a value to 0 or 1 based on its threshold</p>
 					<pre>
-						<code class="fragment" data-fragment-index="1">
+						<code data-trim class="fragment" data-fragment-index="1">
 							val threshold = 5000000L // 50M
 							val isPopular = songs.
 								map(s => if(s.numPlays >= threshold) 1.0 else 0.0)
@@ -99,7 +91,7 @@
 					<h2>Min-Max Scaler</h2>
 					<p>Given a min and a max, scale features to fit within that range</p>
 					<pre>
-						<code class="fragment">
+						<code data-trim class="fragment">
 							val min = 1.0
 							val max = 10.0
 							// find min and max song plays in one pass
@@ -125,7 +117,7 @@
 				<section>
 					<h2>One Hot Encoding</h2>
 					<pre>
-						<code>
+						<code data-trim>
 							// Find unique ordered labels
 							val genres = songs.map(_.genre)
 							 				  .map(Set(_))
@@ -164,7 +156,7 @@
 				<section>
 					<h2>FeatureSpec</h2>
 					<pre>
-						<code>
+						<code data-trim>
 							class FeatureSpec[T] {
   								def required[A](f: T => A)(t: Transformer[A, _, _])
   								def optional[A](f: T => Option[A], default: Option[A] = None)(t: Transformer[A, _, _])
@@ -175,7 +167,7 @@
 				<section>
 					<h2>FeatureSpec</h2>
 					<pre>
-						<code>
+						<code data-trim>
 							import com.spotify.featran._
 							import com.spotify.featran.transformers._
 
@@ -190,7 +182,7 @@
 					<h2>FeatureExtractor</h2>
 
 					<pre>
-						<code>
+						<code data-trim>
 							val featureExtractor = featureSpec.extract(songs)
 							// featureExtractor: com.spotify.featran.FeatureExtractor[Seq,Song]
 						</code>
@@ -201,7 +193,7 @@
 					<h3>FeatureExtractor - CollectionType</h3>
 					<p>FeatureSpec#extract<span class="fragment highlight-green" data-fragment-index="1">[M[_]: CollectionType]</span>(input: M[T]): FeatureExtractor[M, T]</p>
 					<pre>
-						<code class="fragment" data-fragment-index="2">
+						<code data-trim class="fragment" data-fragment-index="2">
 							trait CollectionType[M[_]] { self =>
   								def map[A, B](ma: M[A], f: A => B): M[B]
   								def reduce[A](ma: M[A], f: (A, A) => A): M[A]
@@ -223,7 +215,7 @@
 					<h3>FeatureExtractor - featureNames</h3>
 					<p>Names passed to the transformer</p>
 					<pre>
-						<code>
+						<code data-trim>
 							val featureNames = fe.featureNames
 							// featureNames: Seq[Seq[String]] = List(List(isPopular, numPlay_normalized, genre_Hip Hop, genre_Metal, genre_Rock))
 						</code>
@@ -232,7 +224,7 @@
 				<section>
 					<h3>FeatureExtractor - featureValues</h3>
 					<pre>
-						<code>
+						<code data-trim>
 							val featureValues = fe.featureValues[Seq[Double]]
 							// featureValues: Seq[Seq[Double]] = List(List(1.0, 0.10928075401101646, 0.0, 0.0, 1.0), List(1.0, 0.00828645992365073, 0.0, 1.0, 0.0), List(1.0, 1.0, 1.0, 0.0, 0.0), List(1.0, 0.0, 0.0, 0.0, 1.0))
 						</code>
@@ -261,7 +253,7 @@
 					<h3>FeatureExtractor#featureSettings</h3>
 					<p>Save the results of the Aggregator step (map-reduce-map) for future use</p>
 <pre>
-	<code>
+	<code data-trim>
 		val settings = fe.extract(songs).featureSettings
 // settings: Seq[String] = List([{"cls":"com.spotify.featran.transformers.Binarizer","name":"isPopular","params":{"threshold":"500000.0"},"featureNames":["isPopular"],"aggregators":""},{"cls":"com.spotify.featran.transformers.MinMaxScaler","name":"numPlay_normalized","params":{"min":"0.0","max":"1.0"},"featureNames":["numPlay_normalized"],"aggregators":"5642096.0,3.79732121E8,1.0"},{"cls":"com.spotify.featran.transformers.OneHotEncoder","name":"genre","params":{},"featureNames":["genre_Hip Hop","genre_Metal","genre_Rock"],"aggregators":"label:Hip+Hop,label:Metal,label:Rock"}])
 	</code>
@@ -271,7 +263,7 @@
 					<h3>FeatureExtractor#featureSettings</h3>
 					<p>Use saved settings to skip Aggregator step</p>
 					<pre>
-						<code>
+						<code data-trim>
 							val ews = featureSpec.extractWithSettings(songs, settings)
 							// ews: FeatureExtractor[Seq,Song]
 						</code>
@@ -282,7 +274,7 @@
 					<h3>Other features - Feature rejection</h3>
 					<p>Transformer provides separate error indicating output variable for each record</p>
 					<pre>
-						<code>
+						<code data-trim>
 							val validValues = featureExtractor.featureResults[Seq[Double]]
 															  .filter(_.rejections.isEmpty)
 															  .map(_.value)
@@ -294,7 +286,7 @@
 					<h3>Other features - Combining specs</h3>
 					<p>Compute multiple feature transformations over the same inputs</p>
 					<pre>
-						<code>
+						<code data-trim>
 							val fs1 = FeatureSpec.of[Song]
   .required(_.numPlays.toDouble)(Binarizer("isPopular", 500000.0))
   .required(_.numPlays.toDouble)(MinMaxScaler("numPlay_normalized"))
@@ -340,7 +332,7 @@ multiFeatures.featureValues[Seq[Double]]
 				<section>
 					<h3>Why use Featran?</h3>
 					<ul>
-						<li>Clarity and flexibility in how you compose and build features</li>
+						<li>Clarity and flexibility in how you compose and build features</lif>
 						<li>Many common transformers provided out of the box</li>
 						<li>Supports many input collection types and output feature formats</li>
 						<li>Ability to save intermediate stages using featureSettings</li>
@@ -348,7 +340,7 @@ multiFeatures.featureValues[Seq[Double]]
 				</section>
 				<section>
 					<h2>Want to know more?</h2>
-					<p>https://github.com/spotify/featran</p>
+					<h4>https://github.com/spotify/featran</h4>
 				</section>
 				<section>
 					<h2>Thanks! Questions?</h2>
