@@ -25,15 +25,16 @@
 		<div class="reveal">
 			<div class="slides">
 				<section id="1">
-					<h2>Featran</h2>
+					<h1>Featran</h1>
 					<h3>Type Safe and Generic Feature Transformation in Scala</h3>
 					<h5>Fallon Chen, fallon@spotify.com</h5>
 				</section>
-				<section id="2"><h3>Feature Engineering</h3>
-					<p class="fragment blockquote">The art and craft of using domain knowledge to transform raw data into a form useful in machine learning algorithms</p>
+				<section id="2"><h2>Feature Engineering</h2>
+					<p class="fragment">The process of using domain knowledge to transform features into a form useful in machine learning algorithms</p>
 				</section>
 					<section id="3">
-						<h3>Features</h3>
+						<h2>Features</h2>
+						<p>Measurable property or characteristic of phenomenon being observed</p>
 					<pre>
 						<code data-trim class="fragment scala">
 							case class Song(id: Long,
@@ -52,17 +53,25 @@
 					</section>
 
 				<section>
-					<h3>Feature Engineering</h3>
-					<p>Machine learning algorithms operate on collections of numbers, e.g. operations on matrices or vectors of floats and doubles</p>
+					<h2>Features Useful for ML</h2>
+					<p>Machine learning algorithms operate on collections of numbers (doubles, floats)</p>
 					<pre>
 						<code data-trim class="fragment scala">
-							// pretend set up for collaborative filtering for recommendation systems
+							// collaborative filtering for recommendation systems
+							// Create 2d array of Doubles representing (user, song) pair
 							val userLiked = users.map(u => songs.map(s => if(u.favoriteSongs.contains(s)) 1.0 else 0.0)
+
+							// Factor out vectors representing taste
 							val (userVectors, songVectors) = secretSauceMatrixFactorization(songUserMatrix)
-							// ... plug userVectors and songVectors into collaborative filtering model to get recommendation
+
+							// .. compare userVectors, songVectors to make recommendations
 						</code>
 					</pre>
+				</section>
+				<section>
 					<p class="fragment">How do we get from raw features like Song to ML algorithm friendly features like songVectors?</p>
+					<p class="fragment">Feature Transformation</p>
+
 				</section>
 				<section>
 					<h2>3 Basic Feature Transformations</h2>
@@ -105,16 +114,20 @@
 				</section>
 				<section>
 					<h2>One Hot Encoding</h2>
-					<p>Given a set of labels for a feature, the feature is transformed into an sequence that has a 1 in the position matching its label and 0 otherwise</p>
-					<p>val genres = Seq("Hip Hop", "Metal", "Rock")</p>
-					<p>One Hot Encoding of Song("Bleed", "Meshuggah", "Metal", 8741978) is (0, 0, 0, 1)</p>
+					<p>Given a sequence of categories over all features, the feature is transformed into an sequence that has a 1 in the position matching its category and 0 otherwise</p>
+
+					<ul>
+						<li>Song("Bleed", "Meshuggah", "Metal", 8741978)</li>
+						<li>Genres: ("Hip Hop", "Metal", "Rock")</li>
+						<li>One Hot: (0        , 1      , 0)</li>
+					</ul>
 
 				</section>
 				<section>
 					<h2>One Hot Encoding</h2>
 					<pre>
 						<code data-trim class="scala">
-							// Find unique ordered labels
+							// Find unique ordered categories i.e. genres
 							val genres = songs.map(_.genre)
 							                  .map(Set(_))
 							                  .reduce(_ ++ _)
@@ -186,7 +199,7 @@
 
 				</section>
 				<section>
-					<h3>FeatureExtractor - Input Types</h3>
+					<h2>FeatureExtractor - Input Types</h2>
 					<p>FeatureSpec#extract<span class="fragment highlight-green" data-fragment-index="1">[M[_]: CollectionType]</span>(input: M[T]): FeatureExtractor[M, T]</p>
 					<pre>
 						<code data-trim class="fragment scala" data-fragment-index="2">
@@ -197,10 +210,10 @@
 							}
 						</code>
 					</pre>
-					<p class="fragment" data-fragment-index="3">Available for Scala collections and a few other collection types that extend this trait</p>
+					<p class="fragment" data-fragment-index="3">Featran provides definitions for Scala collections and some other distributed collection types that extend this trait</p>
 				</section>
 				<section>
-					<h3>FeatureExtractor - Transformed Features</h3>
+					<h2>FeatureExtractor - Transformed Features</h2>
 					<ul>
 						<li>featureNames</li>
 						<li>featureValues</li>
@@ -208,7 +221,7 @@
 					</ul>
 				</section>
 				<section>
-					<h3>FeatureExtractor - Names</h3>
+					<h2>FeatureExtractor - Names</h2>
 					<p>Names passed to the transformer</p>
 					<pre>
 						<code data-trim class="scala">
@@ -224,7 +237,7 @@
 					</pre>
 				</section>
 				<section>
-					<h3>FeatureExtractor - Values</h3>
+					<h2>FeatureExtractor - Values</h2>
 					<pre>
 						<code data-trim class="scala">
 							val featureValues = fe.featureValues[Seq[Double]]
@@ -237,7 +250,7 @@
 					</pre>
 				</section>
 				<section>
-					<h3>FeatureExtractor - Values - Output Types</h3>
+					<h2>FeatureExtractor - Values - Output Types</h2>
 					<p>FeatureExtractor#featureValues<span class="fragment highlight-green" data-fragment-index="1">[F: FeatureBuilder]</span>: M[F]</p>
 					<pre>
 						<code data-trim class="fragment scala" data-fragment-index="2">
@@ -252,11 +265,11 @@
 						</code>
 					</pre>
 					<p class="fragment" data-fragment-index="3">
-						Array[T], Traversable[T], SparseVector[T], DenseVector[T], Map[String, T], TensorFlow Example protobuf ...</p>
+						Featran provides these output types and more: Traversable[T], SparseVector[T], DenseVector[T], TensorFlow Example protobuf ...</p>
 
 				</section>
 				<section>
-					<h3>FeatureExtractor#featureSettings</h3>
+					<h2>FeatureExtractor#featureSettings</h2>
 					<p>Save the results of the Aggregator step (map-reduce-map) for future use</p>
 					<pre><code data-trim class="scala">
                    val settings = fe.extract(songs).featureSettings
@@ -270,7 +283,7 @@
 					</pre>
 				</section>
 				<section>
-					<h3>FeatureExtractor#featureSettings</h3>
+					<h2>FeatureExtractor#featureSettings</h2>
 					<p>Use saved settings to skip Aggregator step</p>
 					<pre>
 						<code data-trim class="scala">
@@ -281,7 +294,7 @@
 
 				</section>
 				<section>
-					<h3>Other Features - Feature Rejection</h3>
+					<h2>Other Features - Feature Rejection</h2>
 					<p>Transformer provides separate collection with errors for each record</p>
 					<pre>
 						<code data-trim class="scala">
@@ -293,7 +306,7 @@
 					</pre>
 				</section>
 				<section>
-					<h3>Other Features - Combining FeatureSpecs</h3>
+					<h2>Other Features - Combining FeatureSpecs</h2>
 					<p>Compute multiple feature transformations over the same inputs</p>
 					<pre>
 					<code data-trim class="scala">
@@ -310,15 +323,15 @@
 					</pre>
 				</section>
 				<section>
-					<h3>Other features - Feature Crossing</h3>
+					<h2>Other features - Feature Crossing</h2>
 					<p>Cross values of a pair of transformers by specifying transformer and function for combining</p>
 				</section>
 				<section>
-					<h3>Other features - Java API</h3>
+					<h2>Other features - Java API</h2>
 					<p>Do all your Featran style feature transformations in Java</p>
 				</section>
 <section>
-	<h3>Available Transformers</h3>
+	<h2>Available Transformers</h2>
 	<ul>
 		<li>Binarizer</li>
 		<li>Bucketizer</li>
