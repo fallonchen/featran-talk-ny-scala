@@ -84,7 +84,7 @@
 
 				<section>
 					<h2>Binarizer</h2>
-					<p>Given a threshold, set a value to 0 or 1 based on its threshold</p>
+					<p>Given a threshold, return 0 or 1 based on whether or not the value crosses the threshold</p>
 					<pre>
 						<code data-trim class="fragment scala" data-fragment-index="1">
 							val threshold = 5000000L // 50M
@@ -210,7 +210,7 @@
 							}
 						</code>
 					</pre>
-					<p class="fragment" data-fragment-index="3">Featran provides definitions for Scala collections and some other distributed collection types that extend this trait</p>
+					<p class="fragment" data-fragment-index="3">Featran provides definitions for Scala collections and as well as distributed collection types that extend this trait</p>
 				</section>
 				<section>
 					<h2>FeatureExtractor - Transformed Features</h2>
@@ -230,7 +230,9 @@
 							   .required(_.numPlays)(MinMaxScaler("numPlay_normalized"))
 							   .optional(_.genre)(OneHotEncoder("genre"))
 
-							val featureNames = fe.featureNames
+							val featureExtractor = featureSpec.extract(songs)
+
+							val featureNames = featureExtractor.featureNames
 							// featureNames: Seq[Seq[String]] =
 							//   List(List(isPopular, numPlay_normalized, genre_Hip Hop, genre_Metal, genre_Rock))
 						</code>
@@ -240,7 +242,7 @@
 					<h2>FeatureExtractor - Values</h2>
 					<pre>
 						<code data-trim class="scala">
-							val featureValues = fe.featureValues[Seq[Double]]
+							val featureValues = featureExtractor.featureValues[Seq[Double]]
 							// featureValues: Seq[Seq[Double]] =
 							// List(List(1.0, 0.10928075401101646, 0.0, 0.0, 1.0),
 							//      List(1.0, 0.00828645992365073, 0.0, 1.0, 0.0),
@@ -328,7 +330,7 @@
 				</section>
 				<section>
 					<h2>Other features - Java API</h2>
-					<p>Do all your Featran style feature transformations in Java</p>
+					<p>Use Java when Scala isn't available</p>
 				</section>
 <section>
 	<h2>Available Transformers</h2>
@@ -351,7 +353,7 @@
 				<section>
 					<h3>Why use Featran?</h3>
 					<ul>
-						<li>Clarity and flexibility in how you compose and build features</lif>
+						<li>Clarity and flexibility in how you compose and build features -> easier to reproduce</lif>
 						<li>Many common transformers provided out of the box</li>
 						<li>Supports many input collection types and output feature formats</li>
 						<li>Ability to save intermediate stages using featureSettings</li>
