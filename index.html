@@ -4,7 +4,7 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>Featran - NY Scala</title>
+		<title>Featran - Cognifest 2017</title>
 
 		<link rel="stylesheet" href="css/reveal.css">
 		<link rel="stylesheet" href="css/theme/spotify.css">
@@ -43,10 +43,11 @@
 							                genre: Option[String],
 							                numPlays: Long)
 
-							val songs = Seq(Song(1, "Blackbird","The Beatles", Some("Rock"), 46522936),
-							                Song(2, "Bleed", "Meshuggah", Some("Metal"), 8741978),
-							                Song(3, "Bad and Bougee", "Migos", Some("Hip Hop"), 379732121),
-							                Song(4, "Feet Don't Fail Me", "QOTSA", Some("Rock"), 5642096))
+							val songs = Seq(
+							Song(1, "Blackbird","The Beatles", Some("Rock"), 46522936),
+							Song(2, "Bleed", "Meshuggah", Some("Metal"), 8741978),
+							Song(3, "Bad and Bougee", "Migos", Some("Hip Hop"), 379732121),
+							Song(4, "Feet Don't Fail Me", "QOTSA", Some("Rock"), 5642096))
 
 						</code>
 					</pre>
@@ -59,17 +60,19 @@
 						<code data-trim class="fragment scala">
 							// collaborative filtering for recommendation systems
 							// Create 2d array of Doubles representing (user, song) pair
-							val userLiked = users.map(u => songs.map(s => if(u.favoriteSongs.contains(s)) 1.0 else 0.0)
+							val userLiked = users
+							  .map(u => songs.map(s => if(u.favoriteSongs.contains(s)) 1.0 else 0.0)
 
 							// Factor out vectors representing taste
-							val (userVectors, songVectors) = secretSauceMatrixFactorization(songUserMatrix)
+							val (userVectors, songVectors) =
+							   secretSauceMatrixFactorization(songUserMatrix)
 
 							// .. compare userVectors, songVectors to make recommendations
 						</code>
 					</pre>
 				</section>
 				<section>
-					<p class="fragment">How do we get from raw features like Song to ML algorithm friendly features like songVectors?</p>
+					<p >How do we get from raw features like Song to ML algorithm friendly features like songVectors?</p>
 					<p class="fragment">Feature Transformation</p>
 
 				</section>
@@ -87,7 +90,7 @@
 					<p>Given a threshold, return 0 or 1 based on whether or not the value crosses the threshold</p>
 					<pre>
 						<code data-trim class="fragment scala" data-fragment-index="1">
-							val threshold = 5000000L // 50M
+							val threshold = 50000000L // 50M
 							val isPopular = songs.map(s => if(s.numPlays >= threshold) 1.0 else 0.0)
 							// isPopular: Seq[Double] = List(1.0, 1.0, 1.0, 1.0)
 						</code>
@@ -102,13 +105,14 @@
 							val max = 10.0
 							// find min and max song plays in one pass
 							val (songsMinPlays, songsMaxPlays) = songs
-							                    .map(s => (s.numPlays.toFloat, s.numPlays.toFloat))
-							                    .reduce((x, y) => (math.min(x._1, y._1), math.max(x._2, y._2)))
-
+							         .map(s => (s.numPlays.toFloat, s.numPlays.toFloat))
+							         .reduce((x, y) => (math.min(x._1, y._1), math.max(x._2, y._2)))
 							val minMax = songs.map { x =>
-							    ((x.numPlays - songsMinPlays) / (songsMaxPlays - songsMinPlays)) * (max - min) + min
+							    ((x.numPlays - songsMinPlays) / (songsMaxPlays - songsMinPlays))
+							      * (max - min) + min
 							}
-							//minMax: Seq[Double] = List(1.9835267513990402, 1.074578134343028, 9.999999463558197, 1.0)
+							//minMax: Seq[Double] = List(1.9835267513990402, 1.074578134343028,
+							// 9.999999463558197, 1.0)
 						</code>
 					</pre>
 				</section>
@@ -132,12 +136,15 @@
 							                  .map(Set(_))
 							                  .reduce(_ ++ _)
 							                  .toSeq.sorted
-							// genres: Seq[String] = ArrayBuffer(Hip Hop, Metal, Rock)
+							// genres: Seq[Option[String]] =
+							// ArrayBuffer(Some(Hip Hop), Some(Metal), Some(Rock))
 
 							// Calculate one hots
-							val oneHots = songs.map(s => genres.map(g => if(s.genre == g) 1.0 else 0.0))
-
-							//oneHots: List(ArrayBuffer(0.0, 0.0, 1.0), ArrayBuffer(0.0, 1.0, 0.0), ArrayBuffer(1.0, 0.0, 0.0), ArrayBuffer(0.0, 0.0, 1.0))
+							val oneHots = songs
+							               .map(s => genres.map(g => if(s.genre == g) 1.0 else 0.0))
+							//oneHots: Seq[Seq[Double]] = List(ArrayBuffer(0.0, 0.0, 1.0),
+							// ArrayBuffer(0.0, 1.0, 0.0), ArrayBuffer(1.0, 0.0, 0.0),
+							// ArrayBuffer(0.0, 0.0, 1.0))
 						</code>
 					</pre>
 				</section>
@@ -145,7 +152,8 @@
 					<h2>Notice a pattern?</h2>
 					<ul>
 						<li class="fragment" data-fragment-index="1">Extract T => A e.g. Song => genre</li>
-						<li><span class="fragment" data-fragment-index="2">Aggregate</span><ul>
+						<li class="fragment" data-fragment-index="2">Aggregate
+							<ul>
 							<li class="fragment" data-fragment-index="3">Map A => B e.g. genre to Set</li>
 							<li class="fragment" data-fragment-index="4">Reduce B => B e.g. Set union</li>
 							<li class="fragment" data-fragment-index="5">Map B => C e.g. Set to Seq in One Hot</li>
@@ -178,7 +186,8 @@
 						<code data-trim class="scala">
 							class FeatureSpec[T] {
 							    def required[A](f: T => A)(t: Transformer[A, _, _])
-							    def optional[A](f: T => Option[A], default: Option[A] = None)(t: Transformer[A, _, _])
+							    def optional[A](f: T => Option[A], default: Option[A] = None)
+							                    (t: Transformer[A, _, _])
 							}
 						</code>
 					</pre>
@@ -191,7 +200,7 @@
 							import com.spotify.featran.transformers._
 
 							val featureSpec = FeatureSpec.of[Song]
-							   .required(_.numPlays)(Binarizer("isPopular", 500000.0))
+							   .required(_.numPlays)(Binarizer("isPopular", 50000000.0))
 							   .required(_.numPlays)(MinMaxScaler("numPlay_normalized"))
 							   .optional(_.genre)(OneHotEncoder("genre"))
 						</code>
@@ -235,16 +244,17 @@
 					<p>Names passed to the transformer</p>
 					<pre>
 						<code data-trim class="scala">
-							val featureSpec = FeatureSpec.of[Song]
-							   .required(_.numPlays)(Binarizer("isPopular", 500000.0))
-							   .required(_.numPlays)(MinMaxScaler("numPlay_normalized"))
-							   .optional(_.genre)(OneHotEncoder("genre"))
+val featureSpec = FeatureSpec.of[Song]
+  .required(_.numPlays.toDouble)(Binarizer("isPopular", 50000000.0))
+  .required(_.numPlays.toDouble)(MinMaxScaler("numPlay_normalized"))
+  .optional(_.genre)(OneHotEncoder("genre"))
 
-							val featureExtractor = featureSpec.extract(songs)
+val featureExtractor = featureSpec.extract(songs)
 
-							val featureNames = featureExtractor.featureNames
-							// featureNames: Seq[Seq[String]] =
-							//   List(List(isPopular, numPlay_normalized, genre_Hip Hop, genre_Metal, genre_Rock))
+val featureNames = featureExtractor.featureNames
+// featureNames: Seq[Seq[String]] =
+// List(List(isPopular, numPlay_normalized,
+//            genre_Hip Hop, genre_Metal, genre_Rock))
 						</code>
 					</pre>
 				</section>
@@ -252,12 +262,13 @@
 					<h2>FeatureExtractor - Values</h2>
 					<pre>
 						<code data-trim class="scala">
-							val featureValues = featureExtractor.featureValues[Seq[Double]]
-							// featureValues: Seq[Seq[Double]] =
-							// List(List(1.0, 0.10928075401101646, 0.0, 0.0, 1.0),
-							//      List(1.0, 0.00828645992365073, 0.0, 1.0, 0.0),
-							//      List(1.0, 1.0, 1.0, 0.0, 0.0),
-							//      List(1.0, 0.0, 0.0, 0.0, 1.0))
+val featureValues = featureExtractor.featureValues[Seq[Double]]
+// featureValues: Seq[Seq[Double]] = List(
+//      List(0.0, 0.10928075401101646, 0.0, 0.0, 1.0),
+//      List(0.0, 0.00828645992365073, 0.0, 1.0, 0.0),
+//      List(1.0, 1.0, 1.0, 0.0, 0.0),
+//      List(0.0, 0.0, 0.0, 0.0, 1.0))
+
 						</code>
 					</pre>
 				</section>
@@ -267,12 +278,12 @@
 					<pre>
 						<code data-trim class="fragment scala" data-fragment-index="2">
 						trait FeatureBuilder[T] { self =>
-							def init(dimension: Int): Unit
-							def add(name: String, value: Double): Unit
-							def skip(): Unit
-							def result: T
-							def map[U](f: T => U): FeatureBuilder[U] = new FeatureBuilder[U] {
-							// ...
+						  def init(dimension: Int): Unit
+						  def add(name: String, value: Double): Unit
+						  def skip(): Unit
+						  def result: T
+						  def map[U](f: T => U): FeatureBuilder[U] = new FeatureBuilder[U] {
+						  // ...
 						}
 						</code>
 					</pre>
@@ -284,7 +295,7 @@
 					<h2>FeatureExtractor#featureSettings</h2>
 					<p>Save the results of the Aggregator step (map-reduce-map) for future use</p>
 					<pre><code data-trim class="scala">
-                   val settings = fe.extract(songs).featureSettings
+                   val settings = featureExtractor.featureSettings
                    // settings: Seq[String] = List(
                    // [{"cls":"com.spotify.featran.transformers.Binarizer",...,"aggregators":""},
                    //  {"cls":"com.spotify.featran.transformers.MinMaxScaler", ... ,
@@ -310,7 +321,7 @@
 					<p>Transformer provides separate collection with errors for each record</p>
 					<pre>
 						<code data-trim class="scala">
-							val validValues = featureExtractor.featureResults[Seq[Double]]
+							val validValues = featureExtractor.featureResults[Seq[DoubleSong]]
 							                                  .filter(_.rejections.isEmpty)
 							                                  .map(_.value)
 
@@ -322,14 +333,14 @@
 					<p>Compute multiple feature transformations over the same inputs</p>
 					<pre>
 					<code data-trim class="scala">
-	                val fs1 = FeatureSpec.of[Song]
-                               .required(_.numPlays.toDouble)(Binarizer("isPopular", 500000.0))
-                               .required(_.numPlays.toDouble)(MinMaxScaler("numPlay_normalized"))
+val fs1 = FeatureSpec.of[Song]
+     .required(_.numPlays.toDouble)(Binarizer("isPopular", 50000000.0))
+     .required(_.numPlays.toDouble)(MinMaxScaler("numPlay_normalized"))
 
-                val fs2 = FeatureSpec.of[Song]
-	                           .optional(_.genre)(OneHotEncoder("genre")
+val fs2 = FeatureSpec.of[Song]
+     .optional(_.genre)(OneHotEncoder("genre"))
 
-	              val multiFeatures = MultiFeatureSpec(fs1, fs2).extract(songs)
+val multiFeatures = MultiFeatureSpec(fs1, fs2).extract(songs)
 
 					</code>
 					</pre>
@@ -363,10 +374,15 @@
 				<section>
 					<h3>Why use Featran?</h3>
 					<ul>
-						<li>Clarity and flexibility in how you compose and build features -> easier to reproduce</lif>
+						<li>Reproducibility of feature engineering
+							<ul>
+						<li>Clarity and flexibility in how you compose and build features</li>
+						<li>Ability to save intermediate stages using featureSettings</li>
+							</ul>
+						</li>
+
 						<li>Many common transformers provided out of the box</li>
 						<li>Supports many input collection types and output feature formats</li>
-						<li>Ability to save intermediate stages using featureSettings</li>
 					</ul>
 				</section>
 				<section>
